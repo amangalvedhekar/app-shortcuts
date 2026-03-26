@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "app-shortcuts": ["../src/index"],
+      "app-shortcuts/*": ["../src/*"]
+    }
+  }
+}
