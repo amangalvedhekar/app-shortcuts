@@ -1,50 +1,223 @@
 package expo.modules.appshortcuts
 
+import android.content.Intent
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
+import android.graphics.drawable.Icon
+import android.os.Build
+import expo.modules.kotlin.records.Field
+import expo.modules.kotlin.records.Record
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-import java.net.URL
 
 class AppShortcutsModule : Module() {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
+  private var hasListeners = false
+  private var pendingShortcut: ShortcutItemRecord? = null
+
   override fun definition() = ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('AppShortcuts')` in JavaScript.
     Name("AppShortcuts")
 
-    // Defines constant property on the module.
-    Constant("PI") {
-      Math.PI
+    Events("onShortcut")
+
+    OnCreate {
+      cacheInitialShortcutFromActivityIntent()
     }
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      "Hello world! 👋"
+    OnActivityEntersForeground {
+      cacheInitialShortcutFromActivityIntent()
     }
 
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { value: String ->
-      // Send an event to JavaScript.
-      sendEvent("onChange", mapOf(
-        "value" to value
-      ))
+    OnStartObserving("onShortcut") {
+      hasListeners = true
     }
 
-    // Enables the module to be used as a native view. Definition components that are accepted as part of
-    // the view definition: Prop, Events.
-    View(AppShortcutsView::class) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { view: AppShortcutsView, url: URL ->
-        view.webView.loadUrl(url.toString())
+    OnStopObserving("onShortcut") {
+      hasListeners = false
+    }
+
+    AsyncFunction("setShortcuts") { items: List<ShortcutItemRecord> ->
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) {
+        return@AsyncFunction
       }
-      // Defines an event that the view can send to JavaScript.
-      Events("onLoad")
+
+      val context = appContext.reactContext
+      if (context == null) {
+        return@AsyncFunction
+      }
+
+      val shortcutManager = context.getSystemService(ShortcutManager::class.java)
+      if (shortcutManager == null) {
+        return@AsyncFunction
+      }
+
+      val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+      if (launchIntent == null) {
+        return@AsyncFunction
+      }
+
+      val maxShortcutCount = shortcutManager.maxShortcutCountPerActivity
+
+      shortcutManager.dynamicShortcuts = items
+        .take(maxShortcutCount)
+        .map { item -> item.toShortcutInfo(context, launchIntent) }
+    }
+
+    AsyncFunction("clearShortcuts") { _: Unit? ->
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) {
+        pendingShortcut = null
+        return@AsyncFunction
+      }
+
+      val context = appContext.reactContext
+      if (context == null) {
+        return@AsyncFunction
+      }
+
+      val shortcutManager = context.getSystemService(ShortcutManager::class.java)
+      if (shortcutManager == null) {
+        return@AsyncFunction
+      }
+
+      shortcutManager.removeAllDynamicShortcuts()
+      pendingShortcut = null
+    }
+
+    AsyncFunction("getInitialShortcut") {
+      pendingShortcut
+    }
+
+    OnNewIntent { intent ->
+      val shortcut = intent.toShortcutItemRecord() ?: return@OnNewIntent
+      pendingShortcut = shortcut
+
+      if (hasListeners) {
+        sendEvent("onShortcut", shortcut.toPayload())
+      }
+    }
+
+    View<AppShortcutsViewProps>("AppShortcuts") { props ->
+      AppShortcutsCard(props)
     }
   }
+
+  private fun cacheInitialShortcutFromActivityIntent() {
+    val shortcut = appContext.currentActivity?.intent?.toShortcutItemRecord() ?: return
+    pendingShortcut = shortcut
+  }
 }
+
+private data class ShortcutItemRecord(
+  @Field
+  val id: String = "",
+  @Field
+  val title: String = "",
+  @Field
+  val subtitle: String? = null,
+  @Field
+  val icon: String? = null,
+  @Field
+  val url: String? = null,
+  @Field
+  val params: Map<String, String>? = null
+) : Record {
+  fun toShortcutInfo(context: android.content.Context, baseIntent: Intent): ShortcutInfo {
+    val intent = Intent(baseIntent).apply {
+      action = Intent.ACTION_VIEW
+      flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+      putExtra(EXTRA_SHORTCUT_ID, id)
+      putExtra(EXTRA_SHORTCUT_TITLE, title)
+      putExtra(EXTRA_SHORTCUT_SUBTITLE, subtitle)
+      putExtra(EXTRA_SHORTCUT_ICON, icon)
+      putExtra(EXTRA_SHORTCUT_URL, url)
+
+      val encodedParams = AppShortcutsSerialization.encodeParams(params)
+      if (encodedParams != null) {
+        putExtra(EXTRA_SHORTCUT_PARAMS, encodedParams)
+      } else {
+        removeExtra(EXTRA_SHORTCUT_PARAMS)
+      }
+    }
+
+    return ShortcutInfo.Builder(context, id)
+      .setShortLabel(title)
+      .apply {
+        if (!subtitle.isNullOrEmpty()) {
+          setLongLabel(subtitle)
+        }
+
+        AppShortcutsIconResolver.icon(context, icon)?.let(::setIcon)
+      }
+      .setIntent(intent)
+      .build()
+  }
+
+  fun toPayload(): Map<String, Any?> {
+    return mapOf(
+      "id" to id,
+      "title" to title,
+      "subtitle" to subtitle,
+      "icon" to icon,
+      "url" to url,
+      "params" to params
+    )
+  }
+}
+
+private fun Intent.toShortcutItemRecord(): ShortcutItemRecord? {
+  val id = getStringExtra(EXTRA_SHORTCUT_ID) ?: return null
+
+  return ShortcutItemRecord(
+    id = id,
+    title = getStringExtra(EXTRA_SHORTCUT_TITLE) ?: id,
+    subtitle = getStringExtra(EXTRA_SHORTCUT_SUBTITLE),
+    icon = getStringExtra(EXTRA_SHORTCUT_ICON),
+    url = getStringExtra(EXTRA_SHORTCUT_URL),
+    params = AppShortcutsSerialization.decodeParams(getStringExtra(EXTRA_SHORTCUT_PARAMS))
+  )
+}
+
+private object AppShortcutsIconResolver {
+  private val symbolResourceNames = mapOf(
+    "house" to "as_shortcut_home",
+    "tray.full" to "as_shortcut_inbox",
+    "square.and.pencil" to "as_shortcut_compose"
+  )
+
+  fun icon(context: android.content.Context, iconName: String?): Icon? {
+    val resources = context.resources
+    val packageName = context.packageName
+    val resolvedName = iconName?.trim()?.takeIf { it.isNotEmpty() }
+
+    val drawableId = resolvedName
+      ?.let { name -> resourceNameCandidates(name) }
+      ?.firstNotNullOfOrNull { candidate ->
+        resources.getIdentifier(candidate, "drawable", packageName).takeIf { it != 0 }
+          ?: resources.getIdentifier(candidate, "mipmap", packageName).takeIf { it != 0 }
+      }
+      ?: context.applicationInfo.icon.takeIf { it != 0 }
+      ?: return null
+
+    return Icon.createWithResource(context, drawableId)
+  }
+
+  private fun resourceNameCandidates(iconName: String): List<String> {
+    val normalizedName = iconName
+      .lowercase()
+      .replace(Regex("[^a-z0-9_]"), "_")
+      .trim('_')
+
+    return listOfNotNull(
+      iconName,
+      normalizedName.takeIf { it.isNotEmpty() },
+      symbolResourceNames[iconName],
+      symbolResourceNames[iconName.lowercase()]
+    ).distinct()
+  }
+}
+
+private const val EXTRA_SHORTCUT_ID = "expo.modules.appshortcuts.extra.ID"
+private const val EXTRA_SHORTCUT_TITLE = "expo.modules.appshortcuts.extra.TITLE"
+private const val EXTRA_SHORTCUT_SUBTITLE = "expo.modules.appshortcuts.extra.SUBTITLE"
+private const val EXTRA_SHORTCUT_ICON = "expo.modules.appshortcuts.extra.ICON"
+private const val EXTRA_SHORTCUT_URL = "expo.modules.appshortcuts.extra.URL"
+private const val EXTRA_SHORTCUT_PARAMS = "expo.modules.appshortcuts.extra.PARAMS"

@@ -1,19 +1,26 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 
-export type OnLoadEventPayload = {
-  url: string;
+export type ShortcutItem = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  icon?: string;
+  url?: string;
+  params?: Record<string, string>;
+};
+
+export type Subscription = {
+  remove(): void;
 };
 
 export type AppShortcutsModuleEvents = {
-  onChange: (params: ChangeEventPayload) => void;
-};
-
-export type ChangeEventPayload = {
-  value: string;
+  onShortcut: (item: ShortcutItem) => void;
 };
 
 export type AppShortcutsViewProps = {
-  url: string;
-  onLoad: (event: { nativeEvent: OnLoadEventPayload }) => void;
+  title: string;
+  subtitle?: string;
+  icon?: string;
+  accentColor?: string;
   style?: StyleProp<ViewStyle>;
 };

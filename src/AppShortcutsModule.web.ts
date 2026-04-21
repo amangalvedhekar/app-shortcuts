@@ -1,15 +1,19 @@
 import { registerWebModule, NativeModule } from 'expo';
 
-import { AppShortcutsModuleEvents } from './AppShortcuts.types';
+import { AppShortcutsModuleEvents, ShortcutItem } from './AppShortcuts.types';
 
 class AppShortcutsModule extends NativeModule<AppShortcutsModuleEvents> {
-  PI = Math.PI;
-  async setValueAsync(value: string): Promise<void> {
-    this.emit('onChange', { value });
+  private initialShortcut: ShortcutItem | null = null;
+
+  async setShortcuts(_items: ShortcutItem[]): Promise<void> {}
+
+  async clearShortcuts(): Promise<void> {
+    this.initialShortcut = null;
   }
-  hello() {
-    return 'Hello world! 👋';
+
+  async getInitialShortcut(): Promise<ShortcutItem | null> {
+    return this.initialShortcut;
   }
 }
 
-export default registerWebModule(AppShortcutsModule, 'AppShortcutsModule');
+export default registerWebModule(AppShortcutsModule, 'AppShortcuts');

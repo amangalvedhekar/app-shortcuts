@@ -1,48 +1,180 @@
 import ExpoModulesCore
+#if os(iOS)
+import UIKit
+#endif
 
 public class AppShortcutsModule: Module {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
   public func definition() -> ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('AppShortcuts')` in JavaScript.
     Name("AppShortcuts")
 
-    // Defines constant property on the module.
-    Constant("PI") {
-      Double.pi
+    Events("onShortcut")
+
+    OnCreate {
+      #if os(iOS)
+      AppShortcutsRegistry.shared.attach(module: self)
+      #endif
     }
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      return "Hello world! 👋"
+    OnDestroy {
+      #if os(iOS)
+      AppShortcutsRegistry.shared.detach(module: self)
+      #endif
     }
 
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { (value: String) in
-      // Send an event to JavaScript.
-      self.sendEvent("onChange", [
-        "value": value
-      ])
+    OnStartObserving("onShortcut") {
+      #if os(iOS)
+      AppShortcutsRegistry.shared.setHasListeners(true)
+      #endif
     }
 
-    // Enables the module to be used as a native view. Definition components that are accepted as part of the
-    // view definition: Prop, Events.
-    View(AppShortcutsView.self) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { (view: AppShortcutsView, url: URL) in
-        if view.webView.url != url {
-          view.webView.load(URLRequest(url: url))
-        }
-      }
+    OnStopObserving("onShortcut") {
+      #if os(iOS)
+      AppShortcutsRegistry.shared.setHasListeners(false)
+      #endif
+    }
 
-      Events("onLoad")
+    AsyncFunction("setShortcuts") { (items: [ShortcutItemRecord]) in
+      #if os(iOS)
+      UIApplication.shared.shortcutItems = items.map { $0.toShortcutItem() }
+      #endif
+    }
+    .runOnQueue(.main)
+
+    AsyncFunction("clearShortcuts") {
+      #if os(iOS)
+      UIApplication.shared.shortcutItems = []
+      AppShortcutsRegistry.shared.clearPendingShortcut()
+      #endif
+    }
+    .runOnQueue(.main)
+
+    AsyncFunction("getInitialShortcut") { () -> ShortcutItemRecord? in
+      #if os(iOS)
+      return AppShortcutsRegistry.shared.pendingShortcut
+      #else
+      return nil
+      #endif
+    }
+
+    View(AppShortcutsView.self)
+  }
+}
+
+struct ShortcutItemRecord: Record {
+  @Field
+  var id: String = ""
+
+  @Field
+  var title: String = ""
+
+  @Field
+  var subtitle: String?
+
+  @Field
+  var icon: String?
+
+  @Field
+  var url: String?
+
+  @Field
+  var params: [String: String]?
+
+  func toPayload() -> [String: Any] {
+    descriptor.payload
+  }
+
+  var descriptor: AppShortcutDescriptor {
+    AppShortcutDescriptor(
+      id: id,
+      title: title,
+      subtitle: subtitle,
+      icon: icon,
+      url: url,
+      params: params
+    )
+  }
+}
+
+#if os(iOS)
+extension ShortcutItemRecord {
+  func toShortcutItem() -> UIApplicationShortcutItem {
+    UIApplicationShortcutItem(
+      type: id,
+      localizedTitle: title,
+      localizedSubtitle: subtitle,
+      icon: AppShortcutsIconResolver.icon(from: icon),
+      userInfo: descriptor.userInfo
+    )
+  }
+
+  static func from(shortcutItem: UIApplicationShortcutItem) -> ShortcutItemRecord {
+    var record = ShortcutItemRecord()
+    let descriptor = AppShortcutDescriptor.from(
+      userInfo: shortcutItem.userInfo,
+      fallbackId: shortcutItem.type,
+      fallbackTitle: shortcutItem.localizedTitle,
+      fallbackSubtitle: shortcutItem.localizedSubtitle
+    )
+
+    record.id = descriptor.id
+    record.title = descriptor.title
+    record.subtitle = descriptor.subtitle
+    record.icon = descriptor.icon
+    record.url = descriptor.url
+    record.params = descriptor.params
+
+    return record
+  }
+}
+
+final class AppShortcutsRegistry {
+  static let shared = AppShortcutsRegistry()
+
+  private weak var module: AppShortcutsModule?
+  private(set) var pendingShortcut: ShortcutItemRecord?
+  private var hasListeners = false
+
+  private init() {}
+
+  func attach(module: AppShortcutsModule) {
+    self.module = module
+  }
+
+  func detach(module: AppShortcutsModule) {
+    if self.module === module {
+      self.module = nil
+    }
+  }
+
+  func setHasListeners(_ hasListeners: Bool) {
+    self.hasListeners = hasListeners
+  }
+
+  func clearPendingShortcut() {
+    pendingShortcut = nil
+  }
+
+  func storeInitialShortcut(_ shortcutItem: UIApplicationShortcutItem) {
+    pendingShortcut = ShortcutItemRecord.from(shortcutItem: shortcutItem)
+  }
+
+  func handleShortcut(_ shortcutItem: UIApplicationShortcutItem) {
+    let record = ShortcutItemRecord.from(shortcutItem: shortcutItem)
+    pendingShortcut = record
+
+    if hasListeners {
+      module?.sendEvent("onShortcut", record.toPayload())
     }
   }
 }
+
+enum AppShortcutsIconResolver {
+  static func icon(from value: String?) -> UIApplicationShortcutIcon? {
+    guard let value, !value.isEmpty else {
+      return nil
+    }
+
+    return UIApplicationShortcutIcon(systemImageName: value)
+  }
+}
+#endif

@@ -1,30 +1,76 @@
 package expo.modules.appshortcuts
 
-import android.content.Context
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import expo.modules.kotlin.AppContext
-import expo.modules.kotlin.viewevent.EventDispatcher
-import expo.modules.kotlin.views.ExpoView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import expo.modules.kotlin.views.ComposeProps
 
-class AppShortcutsView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
-  // Creates and initializes an event dispatcher for the `onLoad` event.
-  // The name of the event is inferred from the value and needs to match the event name defined in the module.
-  private val onLoad by EventDispatcher()
+data class AppShortcutsViewProps(
+  val title: String = "Shortcut",
+  val subtitle: String? = null,
+  val icon: String? = null,
+  val accentColor: String? = null
+) : ComposeProps
 
-  // Defines a WebView that will be used as the root subview.
-  internal val webView = WebView(context).apply {
-    layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-    webViewClient = object : WebViewClient() {
-      override fun onPageFinished(view: WebView, url: String) {
-        // Sends an event to JavaScript. Triggers a callback defined on the view component in JavaScript.
-        onLoad(mapOf("url" to url))
+@Composable
+fun AppShortcutsCard(props: AppShortcutsViewProps) {
+  val accent = AppShortcutsColors.parseHexColor(props.accentColor) ?: Color(0xFF1D4ED8)
+  val cardShape = RoundedCornerShape(24.dp)
+
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(
+        brush = Brush.linearGradient(
+          colors = listOf(accent, Color(0xFF111827))
+        ),
+        shape = cardShape
+      )
+      .border(width = 1.dp, color = Color.White.copy(alpha = 0.12f), shape = cardShape)
+      .padding(20.dp)
+  ) {
+    Column(
+      modifier = Modifier.fillMaxSize(),
+      verticalArrangement = Arrangement.SpaceBetween
+    ) {
+      Box(
+        modifier = Modifier
+          .background(Color.White.copy(alpha = 0.18f), shape = RoundedCornerShape(999.dp))
+          .padding(horizontal = 12.dp, vertical = 8.dp)
+      ) {
+        Text(
+          text = props.icon ?: "Shortcut",
+          color = Color.White,
+          fontWeight = FontWeight.Bold
+        )
+      }
+
+      Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+          text = props.title,
+          color = Color.White,
+          fontWeight = FontWeight.Bold
+        )
+
+        props.subtitle?.takeIf { it.isNotEmpty() }?.let { subtitle ->
+          Text(
+            text = subtitle,
+            color = Color.White.copy(alpha = 0.82f)
+          )
+        }
       }
     }
-  }
-
-  init {
-    // Adds the WebView to the view hierarchy.
-    addView(webView)
   }
 }

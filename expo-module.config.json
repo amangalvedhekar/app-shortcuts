@@ -1,7 +1,9 @@
 {
+  "coreFeatures": ["compose"],
   "platforms": ["apple", "android", "web"],
   "apple": {
-    "modules": ["AppShortcutsModule"]
+    "modules": ["AppShortcutsModule"],
+    "appDelegateSubscribers": ["AppShortcutsAppDelegateSubscriber"]
   },
   "android": {
     "modules": ["expo.modules.appshortcuts.AppShortcutsModule"]
