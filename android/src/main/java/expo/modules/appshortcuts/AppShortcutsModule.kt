@@ -3,7 +3,7 @@ package expo.modules.appshortcuts
 import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
-import android.graphics.drawable.Icon
+import android.graphics.drawable.Icon as AndroidIcon
 import android.os.Build
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
@@ -176,31 +176,40 @@ private fun Intent.toShortcutItemRecord(): ShortcutItemRecord? {
   )
 }
 
-private object AppShortcutsIconResolver {
+internal object AppShortcutsIconResolver {
   private val symbolResourceNames = mapOf(
-    "house" to "as_shortcut_home",
-    "tray.full" to "as_shortcut_inbox",
-    "square.and.pencil" to "as_shortcut_compose"
+    "home" to "as_material_symbol_home",
+    "inbox" to "as_material_symbol_inbox",
+    "edit_square" to "as_material_symbol_edit_square",
+    "edit" to "as_material_symbol_edit_square",
+    "compose" to "as_material_symbol_edit_square",
+    "house" to "as_material_symbol_home",
+    "tray.full" to "as_material_symbol_inbox",
+    "square.and.pencil" to "as_material_symbol_edit_square"
   )
 
-  fun icon(context: android.content.Context, iconName: String?): Icon? {
+  fun icon(context: android.content.Context, iconName: String?): AndroidIcon? {
+    val drawableId = resourceId(context, iconName)
+      ?: context.applicationInfo.icon.takeIf { it != 0 }
+      ?: return null
+
+    return AndroidIcon.createWithResource(context, drawableId)
+  }
+
+  fun resourceId(context: android.content.Context, iconName: String?): Int? {
     val resources = context.resources
     val packageName = context.packageName
     val resolvedName = iconName?.trim()?.takeIf { it.isNotEmpty() }
 
-    val drawableId = resolvedName
+    return resolvedName
       ?.let { name -> resourceNameCandidates(name) }
       ?.firstNotNullOfOrNull { candidate ->
         resources.getIdentifier(candidate, "drawable", packageName).takeIf { it != 0 }
           ?: resources.getIdentifier(candidate, "mipmap", packageName).takeIf { it != 0 }
       }
-      ?: context.applicationInfo.icon.takeIf { it != 0 }
-      ?: return null
-
-    return Icon.createWithResource(context, drawableId)
   }
 
-  private fun resourceNameCandidates(iconName: String): List<String> {
+  internal fun resourceNameCandidates(iconName: String): List<String> {
     val normalizedName = iconName
       .lowercase()
       .replace(Regex("[^a-z0-9_]"), "_")
@@ -209,8 +218,11 @@ private object AppShortcutsIconResolver {
     return listOfNotNull(
       iconName,
       normalizedName.takeIf { it.isNotEmpty() },
+      normalizedName.takeIf { it.isNotEmpty() }?.let { "as_material_symbol_$it" },
       symbolResourceNames[iconName],
-      symbolResourceNames[iconName.lowercase()]
+      symbolResourceNames[iconName.lowercase()],
+      symbolResourceNames[normalizedName],
+      normalizedName.takeIf { it.isNotEmpty() }?.let { "as_shortcut_$it" }
     ).distinct()
   }
 }

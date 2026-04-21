@@ -29,4 +29,16 @@ class AppShortcutsSerializationTest {
     assertNull(AppShortcutsColors.parseHexColor("invalid"))
     assertNull(AppShortcutsColors.parseHexColor(null))
   }
+
+  @Test
+  fun `resolves material symbol resource name candidates`() {
+    assertEquals(
+      listOf("inbox", "as_material_symbol_inbox", "as_shortcut_inbox"),
+      AppShortcutsIconResolver.resourceNameCandidates("inbox")
+    )
+    assertEquals(
+      listOf("tray.full", "tray_full", "as_material_symbol_tray_full", "as_material_symbol_inbox", "as_shortcut_tray_full"),
+      AppShortcutsIconResolver.resourceNameCandidates("tray.full")
+    )
+  }
 }

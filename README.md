@@ -2,6 +2,9 @@
 
 `app-shortcuts` is an Expo module for managing native app launcher shortcuts from React Native.
 
+![iOS Demo preview](./example/assets/iOS.gif)
+![Android Demo preview](./example/assets/android.gif)
+
 It lets an app:
 
 - Register dynamic shortcuts shown from the app icon launcher menu.
@@ -101,7 +104,7 @@ type ShortcutItem = {
 - `url`: optional deep link or route value your app can interpret.
 - `params`: optional string key/value metadata returned when the shortcut is opened.
 
-On iOS, `icon` is resolved as an SF Symbol name. On Android, `icon` is resolved from the app's `drawable` or `mipmap` resources.
+On iOS, `icon` is resolved as an SF Symbol name. On Android, `icon` is resolved as a Material Symbol name first, then from the app's `drawable` or `mipmap` resources. The package includes Android Material Symbol drawables for `home`, `inbox`, and `edit_square`, plus aliases for the example SF Symbol names: `house`, `tray.full`, and `square.and.pencil`.
 
 ## API
 
