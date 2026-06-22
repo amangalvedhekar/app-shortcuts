@@ -1,5 +1,5 @@
 {
-  "name": "app-shortcuts",
+  "name": "@amangalvedhekar/app-shortcuts",
   "version": "0.1.0",
   "description": "App shortcuts module",
   "main": "build/index.js",
@@ -21,13 +21,26 @@
     "app-shortcuts",
     "AppShortcuts"
   ],
-  "repository": "https://github.com/amangalvedhekar/app-shortcuts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amangalvedhekar/app-shortcuts.git"
+  },
   "bugs": {
     "url": "https://github.com/amangalvedhekar/app-shortcuts/issues"
   },
   "author": "Anirudh Mangalvedhekar <amangalvedhekar@icloud.com> (amangalvedhekar)",
   "license": "MIT",
   "homepage": "https://github.com/amangalvedhekar/app-shortcuts#readme",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "jest": {
+    "preset": "expo-module-scripts",
+    "testPathIgnorePatterns": [
+      "<rootDir>/example/e2e/"
+    ],
+    "passWithNoTests": true
+  },
   "dependencies": {},
   "devDependencies": {
     "@types/react": "~19.1.1",

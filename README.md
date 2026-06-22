@@ -1,6 +1,6 @@
 # app-shortcuts
 
-`app-shortcuts` is an Expo module for managing native app launcher shortcuts from React Native.
+`@amangalvedhekar/app-shortcuts` is an Expo module for managing native app launcher shortcuts from React Native.
 
 ![iOS Demo preview](./example/assets/iOS.gif)
 ![Android Demo preview](./example/assets/android.gif)
@@ -22,7 +22,7 @@ It lets an app:
 ## Installation
 
 ```sh
-npm install app-shortcuts
+npm install @amangalvedhekar/app-shortcuts
 ```
 
 This package is an Expo native module, so use it from an Expo app or a React Native app configured for Expo modules.
@@ -30,7 +30,7 @@ This package is an Expo native module, so use it from an Expo app or a React Nat
 ## Usage
 
 ```tsx
-import AppShortcuts, { ShortcutItem } from 'app-shortcuts';
+import AppShortcuts, { ShortcutItem } from '@amangalvedhekar/app-shortcuts';
 import { useEffect, useState } from 'react';
 import { Button, Text, View } from 'react-native';
 
@@ -151,7 +151,7 @@ subscription.remove();
 The package also exports `AppShortcutsView`, a native view that can render a shortcut-style preview.
 
 ```tsx
-import { AppShortcutsView } from 'app-shortcuts';
+import { AppShortcutsView } from '@amangalvedhekar/app-shortcuts';
 
 <AppShortcutsView
   title="Compose"
