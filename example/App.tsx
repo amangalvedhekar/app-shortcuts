@@ -1,4 +1,4 @@
-import AppShortcuts, { AppShortcutsView, ShortcutItem } from 'app-shortcuts';
+import AppShortcuts, { AppShortcutsView, ShortcutItem } from '@amangalvedhekar/app-shortcuts';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useRef, useState } from 'react';

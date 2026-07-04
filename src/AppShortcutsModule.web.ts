@@ -1,6 +1,6 @@
 import { registerWebModule, NativeModule } from 'expo';
 
-import { AppShortcutsModuleEvents, ShortcutItem } from './AppShortcuts.types';
+import type { AppShortcutsModuleEvents, ShortcutItem } from './AppShortcuts.types';
 
 class AppShortcutsModule extends NativeModule<AppShortcutsModuleEvents> {
   private initialShortcut: ShortcutItem | null = null;

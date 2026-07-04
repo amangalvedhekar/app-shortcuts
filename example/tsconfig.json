@@ -3,8 +3,8 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "app-shortcuts": ["../src/index"],
-      "app-shortcuts/*": ["../src/*"]
+      "@amangalvedhekar/app-shortcuts": ["../src/index"],
+      "@amangalvedhekar/app-shortcuts/*": ["../src/*"]
     }
   }
 }
