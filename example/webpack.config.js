@@ -6,11 +6,15 @@ module.exports = async (env, argv) => {
     {
       ...env,
       babel: {
-        dangerouslyAddModulePathsToTranspile: ['app-shortcuts'],
+        dangerouslyAddModulePathsToTranspile: ['@amangalvedhekar/app-shortcuts'],
       },
     },
     argv
   );
+  config.resolve.alias = {
+    ...config.resolve.alias,
+    '@amangalvedhekar/app-shortcuts': path.resolve(__dirname, '..'),
+  };
   config.resolve.modules = [
     path.resolve(__dirname, './node_modules'),
     path.resolve(__dirname, '../node_modules'),

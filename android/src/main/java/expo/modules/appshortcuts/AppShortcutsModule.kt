@@ -95,8 +95,10 @@ class AppShortcutsModule : Module() {
       }
     }
 
-    View<AppShortcutsViewProps>("AppShortcuts") { props ->
-      AppShortcutsCard(props)
+    View<AppShortcutsViewProps>("AppShortcuts") {
+      Content { props ->
+        AppShortcutsCard(props)
+      }
     }
   }
 

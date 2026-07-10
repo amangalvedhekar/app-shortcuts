@@ -1,6 +1,4 @@
-import * as React from 'react';
-
-import { AppShortcutsViewProps } from './AppShortcuts.types';
+import type { AppShortcutsViewProps } from './AppShortcuts.types';
 
 export default function AppShortcutsView(props: AppShortcutsViewProps) {
   const accentColor = props.accentColor ?? '#2f6fed';
