@@ -1,6 +1,6 @@
 {
   "name": "@amangalvedhekar/app-shortcuts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "App shortcuts module",
   "main": "build/index.js",
   "types": "build/index.d.ts",
